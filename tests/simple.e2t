@@ -1,0 +1,11 @@
+Object
+    param1: 1, 2, 3, 4
+    param2: true
+    param3: string
+    param4: "String"
+
+    Child
+        param1: 1, "2"
+
+        &__0
+            param1: "Hello world!"
