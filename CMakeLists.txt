@@ -6,5 +6,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 set(SOURCE_FILES main.cpp
         include/e2ml.h
         src/e2ml.cpp
-        src/parser.cpp)
+        src/parser.cpp
+        src/lexer.cpp)
 add_executable(e2ml ${SOURCE_FILES})
