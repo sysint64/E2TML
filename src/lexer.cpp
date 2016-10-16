@@ -1,10 +1,12 @@
 #include "../include/e2ml.h"
 
-char e2ml::Data::lexChar() {
+using namespace e2ml;
+
+char Data::lexChar() {
 	return (char) ifStreams.back().get();
 }
 
-Token *e2ml::Data::lexNextToken() {
+Data::Token *Data::lexNextToken() {
 	if (stackCursor < tokenStack.size()) {
 		++stackCursor;
 		currentToken = tokenStack[stackCursor];
@@ -17,7 +19,7 @@ Token *e2ml::Data::lexNextToken() {
 	}
 }
 
-Token *e2ml::Data::lexPrevToken() {
+Data::Token *Data::lexPrevToken() {
 	--stackCursor;
 
 	if (skipTab)
@@ -28,7 +30,7 @@ Token *e2ml::Data::lexPrevToken() {
 	return &tokenStack[stackCursor-1];
 }
 
-Token *e2ml::Data::lexToken() {
+Data::Token *Data::lexToken() {
 	// Skip spaces
 	while (isspace(lastChar) && (lastChar != '\t' || skipTab))
 		lastChar = lexChar();
@@ -63,3 +65,54 @@ Token *e2ml::Data::lexToken() {
 	return &currentToken;
 }
 
+
+Data::Token *Data::lexTokString() {
+	std::string value;
+	char state = 0;
+
+	while (state != 2) {
+		switch (state) {
+			case 0:
+				do {
+					lastChar = lexChar();
+
+					if (lastChar != '\"')
+						value += lastChar;
+				} while (lastChar != '\"' && lastChar != EOF);
+
+				if (lastChar == EOF)
+					throw LexerError("lex string, end of file");
+				else
+					lastChar = lexChar();
+
+				if (lastChar == '\\') {
+					state = 1;
+					break;
+				}
+
+				state = 2;
+				break;
+
+			case 1:
+				lastChar = lexChar();
+
+				switch (lastChar) {
+					case 'n' : value += "\n"; break;
+					case 'r' : value += "\r"; break;
+					case '\\': value += "\\"; break;
+					case '\"': value += "\""; break;
+					default  : break;
+				}
+
+				state = 0;
+				break;
+
+			default:
+				state = 2;
+				break;
+		}
+	}
+
+	currentToken = Token(tok_string);
+	return &currentToken;
+}

@@ -3,8 +3,23 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <exception>
 
 namespace e2ml {
+	class LexerError : public std::exception {
+	private:
+		std::string details;
+
+	public:
+		LexerError(const std::string &details) {
+			this->details = details;
+		}
+
+		virtual const char* what() const throw() {
+			return ("Lexer error: "+details).c_str();
+		}
+	};
+
 	enum {
 		tok_eof = -1, tok_tab = -2,
 		tok_id = -3, tok_number = -4, tok_string = -5,
@@ -32,6 +47,7 @@ namespace e2ml {
 	class Data {
 	private:
 		struct Token {
+			Token() {}
 			Token(const char code): code(code) {}
 			Token(const char code, const std::string &idstr): code(code), idstr(idstr) {}
 			Token(const char code, const float num): code(code), num(num) {}
