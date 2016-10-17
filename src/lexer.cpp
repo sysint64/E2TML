@@ -65,7 +65,6 @@ Data::Token *Data::lexToken() {
 	return &currentToken;
 }
 
-
 Data::Token *Data::lexTokString() {
 	std::string value;
 	char state = 0;
@@ -81,7 +80,7 @@ Data::Token *Data::lexTokString() {
 				} while (lastChar != '\"' && lastChar != EOF);
 
 				if (lastChar == EOF)
-					throw LexerError("lex string, end of file");
+					throw LexerError("lex string: end of file");
 				else
 					lastChar = lexChar();
 
@@ -114,5 +113,61 @@ Data::Token *Data::lexTokString() {
 	}
 
 	currentToken = Token(tok_string);
+	return &currentToken;
+}
+
+Data::Token *Data::lexTokNumber() {
+	char state = 0;
+	std::string numStr;
+	const int finalState = 9;
+
+	while (state < 8) {
+		switch (state) {
+			case 0: // Digit main
+				numStr += lastChar;
+				lastChar = lexChar();
+
+				if (isdigit(lastChar)) {
+					state = 0;
+				} else if (lastChar == '.') {
+					state = 1;
+				} else {
+					state = finalState;
+				}
+
+				break;
+
+			case 1: // Comma
+				numStr += lastChar;
+				lastChar = lexChar();
+
+				if (isdigit(lastChar)) {
+					state = 2;
+				} else {
+					throw LexerError("lex number: not digit after comma");
+				}
+
+				break;
+
+			case 2: // Digit after comma
+				numStr += lastChar;
+				lastChar = lexChar();
+
+				if (isdigit(lastChar)) {
+					state = 2;
+				} else {
+					state = finalState;
+				}
+
+				break;
+
+			default:
+				throw LexerError("lex number: unknown error");
+		}
+	}
+
+	currentToken = Token(tok_number);
+	currentToken.num = std::stof(numStr);
+
 	return &currentToken;
 }
