@@ -1,41 +1,55 @@
 #include <iostream>
 #include "../include/e2ml.h"
 
-void e2ml::Data::parse() {
-//	while (ifStreams.back().good()) {
-//
-//	}
-	//if (lexNextToken()->code == tok_id) {
-	lexNextToken();
-	lexNextToken();
-	lexNextToken();
-	lexNextToken();
-	lexNextToken();
-	lexNextToken();
-	lexNextToken();
-	lexNextToken();
-	lexNextToken();
-	lexNextToken();
-	lexNextToken();
+using namespace e2ml;
 
+void Data::parse() {
 	lexNextToken();
-	lexNextToken();
-	lexNextToken();
-	// lexNextToken();
+	bool read = ifStreams.back().good();
 
-	// lexNextToken();
-	// lexNextToken();
-	// lexNextToken(); // -4 true
+	//while (read) {
+		switch (currentToken.code) {
+			case tok_eof    : return;
+			case tok_include: parseInclude(); break;
+			case tok_id     : parseObject (); break;
+			default:
+				read = false;
+		}
+	//}
 
-
-	std::cout << tabSize << std::endl;
-	std::cout << indent << std::endl;
-	std::cout << int(currentToken.code) << std::endl;
-	std::cout << currentToken.identifier << std::endl;
-	std::cout << currentToken.string << std::endl;
-	std::cout << currentToken.number << std::endl;
+//	std::cout << tabSize << std::endl;
+//	std::cout << indent << std::endl;
+//	std::cout << int(currentToken.code) << std::endl;
+//	std::cout << currentToken.identifier << std::endl;
+//	std::cout << currentToken.string << std::endl;
+//	std::cout << currentToken.number << std::endl;
 	//}
 
 	ifStreams.back().close();
 	ifStreams.pop_back();
+}
+
+void Data::parseObject() {
+	std::string name = currentToken.string;
+	std::string type = "";
+
+	lexNextToken();
+
+	if (currentToken.code == '(') {
+		lexNextToken();
+		type = currentToken.string;
+
+		lexNextToken();
+
+		if (currentToken.code != ')')
+			throw ParseError("excepted ')'", line, pos);
+
+		lexNextToken();
+	}
+
+	std::cout << name << "(" << type << ")" << std::endl;
+}
+
+void Data::parseInclude() {
+
 }

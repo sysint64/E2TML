@@ -10,12 +10,18 @@ char Data::lexChar() {
 
 	char ch = lostChar != -1 ? lostChar : (char) ifStreams.back().get();
 	lostChar = -1;
+	++pos;
+
+	auto readChar = [this]() -> char {
+		++pos;
+		return (char) ifStreams.back().get();;
+	};
 
 	// Calculate indents
 	if (ch == ' ' && tabSize == 0 && calculateIndent) {
 		while (ch == ' ') {
 			++tabSize;
-			ch = (char) ifStreams.back().get();
+			ch = readChar();
 		}
 
 		lostChar = ch;
@@ -25,7 +31,7 @@ char Data::lexChar() {
 
 		while (ch == ' ') {
 			++spaces;
-			ch = (char) ifStreams.back().get();
+			ch = readChar();
 
 			if (spaces == tabSize) {
 				lostChar = ch;
@@ -33,7 +39,8 @@ char Data::lexChar() {
 			}
 		}
 	} else if (ch == '\r' || ch == '\n') {
-		indent = 0;
+		indent, pos = 0;
+		++line;
 		calculateIndent = true;
 	} else calculateIndent = false;
 

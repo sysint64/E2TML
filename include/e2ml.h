@@ -76,9 +76,9 @@ namespace e2ml {
 			float number;
 		};
 
-		int tabSize = 0;
+		int  tabSize = 0;
 		bool calculateIndent = true;
-		int indent = 0;
+		int  indent = 0;
 		char lostChar = -1;
 
 		Node root;
@@ -88,12 +88,14 @@ namespace e2ml {
 		size_t stackCursor = 0;
 
 		// Meta information
-		char lastChar = ' ';
 		Token currentToken;
-		bool skipTab = false;
+		char  lastChar  = ' ';
+		bool  skipTab   = false;
+		int   line      = 1;
+		int   pos       = 0;
 
 		// Lexer
-		char lexChar();
+		char   lexChar();
 		Token *lexToken();
 		Token *lexNextToken();
 		Token *lexPrevToken();
@@ -104,6 +106,8 @@ namespace e2ml {
 
 		// Parser
 		void parse();
+		void parseObject();
+		void parseInclude();
 
 	public:
 		void load(const std::string &fileName, IOType rt = IOType::Text);
