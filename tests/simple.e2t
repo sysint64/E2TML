@@ -1,4 +1,7 @@
-Object
+# Hello
+# Comment
+
+Object # Comment
     param1: 1, 2, 3, 4
     param2: true
     param3: string

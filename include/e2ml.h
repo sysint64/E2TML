@@ -4,6 +4,8 @@
 #include <vector>
 #include <fstream>
 #include <exception>
+#include <sstream>
+#include <iostream>
 
 namespace e2ml {
 	class LexerError : public std::exception {
@@ -15,8 +17,24 @@ namespace e2ml {
 			this->details = details;
 		}
 
-		virtual const char* what() const throw() {
-			return ("Lexer error: "+details).c_str();
+		virtual const char* what() const noexcept {
+			return details.c_str();
+		}
+	};
+
+	class ParseError : public std::exception {
+	private:
+		std::string details;
+
+	public:
+		ParseError(const std::string &details, const int line, const int pos) {
+			std::stringstream stream;
+			stream << "line " << line << ", pos " << pos << ": " << details;
+			this->details = stream.str();
+		}
+
+		virtual const char* what() const noexcept {
+			return details.c_str();
 		}
 	};
 
@@ -27,7 +45,7 @@ namespace e2ml {
 	};
 
 	enum {
-		op_eof  = 0x00
+		op_eof = 0x00
 	};
 
 	enum class IOType {Text, Bin};
@@ -54,7 +72,7 @@ namespace e2ml {
 
 			char code;
 			std::string identifier;
-			std::string name;
+			std::string string;
 			float number;
 		} typedef tok;
 

@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <iostream>
 #include "../include/e2ml.h"
 
 using namespace e2ml;
@@ -12,9 +13,8 @@ char Data::lexChar() {
 
 Data::Token *Data::lexNextToken() {
 	if (stackCursor < tokenStack.size()) {
-		++stackCursor;
 		currentToken = tokenStack[stackCursor];
-		return &tokenStack[stackCursor];
+		return &tokenStack[++stackCursor];
 	} else {
 		lexToken();
 		tokenStack.push_back(currentToken);
@@ -55,7 +55,7 @@ Data::Token *Data::lexToken() {
 		return lexTokId();
 
 	// Number Float or Integer: [0-9] (.[0-9]+)? (E[+-]? [0-9]+)?
-	if (isdigit(lastChar) || lastChar == '-')
+	if (isdigit(lastChar) || lastChar == '-' || lastChar == '+')
 		return lexTokNumber();
 
 	// Comment
@@ -79,6 +79,11 @@ Data::Token *Data::lexTokString() {
 				do {
 					lastChar = lexChar();
 
+					if (lastChar == '\\') {
+						state = 1;
+						break;
+					}
+
 					if (lastChar != '\"')
 						value += lastChar;
 				} while (lastChar != '\"' && lastChar != tok_eof);
@@ -88,17 +93,12 @@ Data::Token *Data::lexTokString() {
 				else
 					lastChar = lexChar();
 
-				if (lastChar == '\\') {
-					state = 1;
-					break;
-				}
+				if (state == 0)
+					state = 2;
 
-				state = 2;
 				break;
 
 			case 1:
-				lastChar = lexChar();
-
 				switch (lastChar) {
 					case 'n' : value += "\n"; break;
 					case 'r' : value += "\r"; break;
@@ -117,6 +117,7 @@ Data::Token *Data::lexTokString() {
 	}
 
 	currentToken = Token(tok_string);
+	currentToken.string = value;
 	return &currentToken;
 }
 
@@ -170,6 +171,11 @@ Data::Token *Data::lexTokNumber() {
 		}
 	}
 
+	if (numStr == "-" || numStr == "+") {
+		currentToken = Token(numStr[0]);
+		return &currentToken;
+	}
+
 	currentToken = Token(tok_number);
 	currentToken.number = std::stof(numStr);
 
@@ -178,14 +184,13 @@ Data::Token *Data::lexTokNumber() {
 
 Data::Token *Data::lexTokId() {
 	currentToken = Token(tok_id);
-	currentToken.identifier = lastChar;
 
 	while (isdigit(lastChar) || isalpha(lastChar) || lastChar == '_') {
-		lastChar = lexChar();
 		currentToken.identifier += lastChar;
+		lastChar = lexChar();
 	}
 
-	currentToken.name = currentToken.identifier;
+	currentToken.string = currentToken.identifier;
 	std::transform(currentToken.identifier.begin(), currentToken.identifier.end(),
 	               currentToken.identifier.begin(), ::tolower);
 
