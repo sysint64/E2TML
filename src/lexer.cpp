@@ -4,6 +4,9 @@
 using namespace e2ml;
 
 char Data::lexChar() {
+	if (!ifStreams.back().good())
+		return tok_eof;
+
 	return (char) ifStreams.back().get();
 }
 
@@ -55,8 +58,8 @@ Data::Token *Data::lexToken() {
 	if (isdigit(lastChar) || lastChar == '-')
 		return lexTokNumber();
 
-	// Comment or '/'
-	if (lastChar == '/')
+	// Comment
+	if (lastChar == '#')
 		return lexComment();
 
 	// return as ASCII
@@ -78,9 +81,9 @@ Data::Token *Data::lexTokString() {
 
 					if (lastChar != '\"')
 						value += lastChar;
-				} while (lastChar != '\"' && lastChar != EOF);
+				} while (lastChar != '\"' && lastChar != tok_eof);
 
-				if (lastChar == EOF)
+				if (lastChar == tok_eof)
 					throw LexerError("lex string: end of file");
 				else
 					lastChar = lexChar();
@@ -200,5 +203,16 @@ Data::Token *Data::lexTokId() {
 		currentToken.number = 1.f;
 	}
 
+	return &currentToken;
+}
+
+Data::Token *Data::lexComment() {
+	while (lastChar != tok_eof && lastChar != '\n' && lastChar != '\r')
+		lastChar = lexChar();
+
+	if (lastChar != tok_eof)
+		return lexToken();
+
+	currentToken = Token(tok_eof);
 	return &currentToken;
 }
