@@ -8,13 +8,42 @@ char Data::lexChar() {
 	if (!ifStreams.back().good())
 		return tok_eof;
 
-	return (char) ifStreams.back().get();
+	char ch = lostChar != -1 ? lostChar : (char) ifStreams.back().get();
+	lostChar = -1;
+
+	// Calculate indents
+	if (ch == ' ' && tabSize == 0 && calculateIndent) {
+		while (ch == ' ') {
+			++tabSize;
+			ch = (char) ifStreams.back().get();
+		}
+
+		lostChar = ch;
+		return '\t';
+	} else if (ch == ' ' && tabSize > 0) {
+		int spaces = 0;
+
+		while (ch == ' ') {
+			++spaces;
+			ch = (char) ifStreams.back().get();
+
+			if (spaces == tabSize) {
+				lostChar = ch;
+				return '\t';
+			}
+		}
+	} else if (ch == '\r' || ch == '\n') {
+		indent = 0;
+		calculateIndent = true;
+	} else calculateIndent = false;
+
+	return ch;
 }
 
 Data::Token *Data::lexNextToken() {
 	if (stackCursor < tokenStack.size()) {
 		currentToken = tokenStack[stackCursor];
-		return &tokenStack[++stackCursor];
+		return &tokenStack[stackCursor++];
 	} else {
 		lexToken();
 		tokenStack.push_back(currentToken);
@@ -41,6 +70,7 @@ Data::Token *Data::lexToken() {
 
 	// Tab
 	if (!skipTab && lastChar == '\t') {
+		++indent;
 		lastChar = lexChar();
 		currentToken = Token(tok_tab);
 		return &currentToken;
@@ -200,12 +230,12 @@ Data::Token *Data::lexTokId() {
 
 	if (currentToken.identifier == "true") {
 		currentToken.code = tok_number;
-		currentToken.number = 0.f;
+		currentToken.number = 1.f;
 	}
 
 	if (currentToken.identifier == "false") {
 		currentToken.code = tok_number;
-		currentToken.number = 1.f;
+		currentToken.number = 0.f;
 	}
 
 	return &currentToken;

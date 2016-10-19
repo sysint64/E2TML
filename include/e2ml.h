@@ -74,7 +74,12 @@ namespace e2ml {
 			std::string identifier;
 			std::string string;
 			float number;
-		} typedef tok;
+		};
+
+		int tabSize = 0;
+		bool calculateIndent = true;
+		int indent = 0;
+		char lostChar = -1;
 
 		Node root;
 		std::vector<std::ifstream> ifStreams;
