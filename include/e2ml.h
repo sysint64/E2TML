@@ -23,7 +23,7 @@ namespace e2ml {
 	enum {
 		tok_eof = -1, tok_tab = -2,
 		tok_id = -3, tok_number = -4, tok_string = -5,
-		tok_end = -6, tok_include = -7
+		tok_include = -7
 	};
 
 	enum {
@@ -49,12 +49,13 @@ namespace e2ml {
 		struct Token {
 			Token() {}
 			Token(const char code): code(code) {}
-			Token(const char code, const std::string &idstr): code(code), idstr(idstr) {}
-			Token(const char code, const float num): code(code), num(num) {}
+			Token(const char code, const std::string &identifier): code(code), identifier(identifier) {}
+			Token(const char code, const float number): code(code), number(number) {}
 
 			char code;
-			std::string idstr;
-			float num;
+			std::string identifier;
+			std::string name;
+			float number;
 		} typedef tok;
 
 		Node root;

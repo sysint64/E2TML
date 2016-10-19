@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "../include/e2ml.h"
 
 using namespace e2ml;
@@ -167,7 +168,37 @@ Data::Token *Data::lexTokNumber() {
 	}
 
 	currentToken = Token(tok_number);
-	currentToken.num = std::stof(numStr);
+	currentToken.number = std::stof(numStr);
+
+	return &currentToken;
+}
+
+Data::Token *Data::lexTokId() {
+	currentToken = Token(tok_id);
+	currentToken.identifier = lastChar;
+
+	while (isdigit(lastChar) || isalpha(lastChar) || lastChar == '_') {
+		lastChar = lexChar();
+		currentToken.identifier += lastChar;
+	}
+
+	currentToken.name = currentToken.identifier;
+	std::transform(currentToken.identifier.begin(), currentToken.identifier.end(),
+	               currentToken.identifier.begin(), ::tolower);
+
+	if (currentToken.identifier == "include") {
+		currentToken.code = tok_include;
+	}
+
+	if (currentToken.identifier == "true") {
+		currentToken.code = tok_number;
+		currentToken.number = 0.f;
+	}
+
+	if (currentToken.identifier == "false") {
+		currentToken.code = tok_number;
+		currentToken.number = 1.f;
+	}
 
 	return &currentToken;
 }
