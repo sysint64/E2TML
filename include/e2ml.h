@@ -33,9 +33,10 @@ namespace e2ml {
 	private:
 		struct Token {
 			Token() {}
-			Token(const char code): code(code) {}
+			Token(const char code): code(code) { }
 			Token(const char code, const std::string &identifier): code(code), identifier(identifier) {}
 
+			int indent;
 			char code;
 			std::string identifier;
 			std::string string;
@@ -48,6 +49,7 @@ namespace e2ml {
 		bool calculateIndent = true;
 		bool calculateTabSize = true;
 		int  indent = 0;
+		int lastIndent = 0;
 		int  lockedIndent = 0;
 		char lostChar = -1;
 

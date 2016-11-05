@@ -26,6 +26,7 @@ void Data::parseObject() {
 	std::string name = currentToken.string;
 	std::string type = "";
 
+	int objectIndent = getIndent();
 	lexNextToken();
 
 	if (currentToken.code == '(') {
@@ -40,7 +41,28 @@ void Data::parseObject() {
 		lexNextToken();
 	}
 
-	parseParameters(name);
+	while (currentToken.code != tok_eof) {
+		std::string paramName = currentToken.string;
+		lexNextToken();
+		int targetIndent = getIndent()-1;
+
+		if (currentToken.code != ':') {
+			std::cout << paramName << ": " << targetIndent << std::endl;
+			lexPrevToken();
+			parseObject();
+			continue;
+		}
+
+		if (objectIndent != targetIndent) {
+			break;
+		}
+
+		std::cout << paramName << ": " << targetIndent << std::endl;
+
+		parseParameters(paramName);
+	}
+
+	lexPrevToken();
 }
 
 void Data::parseInclude() {
@@ -48,15 +70,7 @@ void Data::parseInclude() {
 }
 
 void Data::parseParameters(const std::string &name) {
-	std::string paramName = currentToken.string;
-	lexNextToken();
 	lockIndent();
-
-	if (currentToken.code != ':') {
-		lexPrevToken();
-		parseObject();
-		return;
-	}
 
 	while (true) {
 		parseValue();
@@ -70,7 +84,6 @@ void Data::parseParameters(const std::string &name) {
 }
 
 std::unique_ptr<Value> Data::parseValue() {
-	std::cout << getIndent() << ", " << tabSize << std::endl;
 	lexNextToken();
 
 	switch (currentToken.code) {
@@ -82,6 +95,9 @@ std::unique_ptr<Value> Data::parseValue() {
 
 		case tok_string:
 			return std::make_unique<StringValue>(currentToken.string, currentToken.utfString);
+
+		case tok_id:
+			return std::make_unique<StringValue>(currentToken.string);
 
 		case tok_boolean:
 			return std::make_unique<BooleanValue>(currentToken.boolean);

@@ -42,6 +42,7 @@ char Data::lexChar() {
 			}
 		}
 	} else if (ch == '\r' || ch == '\n') {
+		lastIndent = indent;
 		indent = 0; pos = 0;
 		++line;
 
@@ -54,9 +55,11 @@ char Data::lexChar() {
 Data::Token *Data::lexNextToken() {
 	if (stackCursor < tokenStack.size()) {
 		currentToken = tokenStack[stackCursor];
+		indent = currentToken.indent;
 		return &tokenStack[stackCursor++];
 	} else {
 		lexToken();
+		currentToken.indent = getIndent();
 		tokenStack.push_back(currentToken);
 		stackCursor = tokenStack.size();
 		return &currentToken;
@@ -71,6 +74,7 @@ Data::Token *Data::lexPrevToken() {
 			--stackCursor;
 
 	currentToken = tokenStack[stackCursor-1];
+	indent = currentToken.indent;
 	return &tokenStack[stackCursor-1];
 }
 
