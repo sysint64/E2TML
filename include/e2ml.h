@@ -3,44 +3,15 @@
 #include <string>
 #include <vector>
 #include <fstream>
-#include <exception>
-#include <sstream>
 #include <iostream>
+#include <bits/unique_ptr.h>
+#include "values.h"
+
 
 namespace e2ml {
-	class LexerError : public std::exception {
-	private:
-		std::string details;
-
-	public:
-		LexerError(const std::string &details) {
-			this->details = details;
-		}
-
-		virtual const char* what() const noexcept {
-			return details.c_str();
-		}
-	};
-
-	class ParseError : public std::exception {
-	private:
-		std::string details;
-
-	public:
-		ParseError(const std::string &details, const int line, const int pos) {
-			std::stringstream stream;
-			stream << "line " << line << ", pos " << pos << ": " << details;
-			this->details = stream.str();
-		}
-
-		virtual const char* what() const noexcept {
-			return details.c_str();
-		}
-	};
-
 	enum {
 		tok_eof = -1, tok_tab = -2,
-		tok_id = -3, tok_number = -4, tok_string = -5,
+		tok_id = -3, tok_number = -4, tok_string = -5, tok_boolean = -6,
 		tok_include = -7
 	};
 
@@ -50,16 +21,12 @@ namespace e2ml {
 
 	enum class IOType {Text, Bin};
 
-	template<typename T>
-	class Value {
-		void *data;
-	};
-
 	class Node {
 	public:
 		std::string name;
 		std::string path;
-		std::vector<Node> children;
+		std::vector<std::unique_ptr<Value>> values;
+		std::vector<std::unique_ptr<Node>> children;
 	};
 
 	class Data {
@@ -68,17 +35,20 @@ namespace e2ml {
 			Token() {}
 			Token(const char code): code(code) {}
 			Token(const char code, const std::string &identifier): code(code), identifier(identifier) {}
-			Token(const char code, const float number): code(code), number(number) {}
 
 			char code;
 			std::string identifier;
 			std::string string;
+			std::u32string utfString;
+			bool boolean;
 			float number;
 		};
 
 		int  tabSize = 0;
 		bool calculateIndent = true;
+		bool calculateTabSize = true;
 		int  indent = 0;
+		int  lockedIndent = 0;
 		char lostChar = -1;
 
 		Node root;
@@ -89,10 +59,11 @@ namespace e2ml {
 
 		// Meta information
 		Token currentToken;
-		char  lastChar  = ' ';
-		bool  skipTab   = false;
-		int   line      = 1;
-		int   pos       = 0;
+		char  lastChar    = ' ';
+		bool  isLockIndent = false;
+		bool  skipTab      = false;
+		int   line         = 1;
+		int   pos          = 0;
 
 		// Lexer
 		char   lexChar();
@@ -104,9 +75,25 @@ namespace e2ml {
 		Token *lexTokId();
 		Token *lexComment();
 
+		inline void lockIndent() {
+			lockedIndent = indent;
+			isLockIndent = true;
+		}
+
+		inline void unlockIndent() {
+			isLockIndent = false;
+		}
+
+		inline int getIndent() {
+			return isLockIndent ? lockedIndent : indent;
+		}
+
 		// Parser
 		void parse();
 		void parseObject();
+		void parseParameters(const std::string &name);
+		std::unique_ptr<Value> parseValue();
+		std::unique_ptr<Value> parseArray();
 		void parseInclude();
 
 	public:
@@ -114,20 +101,21 @@ namespace e2ml {
 		void save(const std::string &fileName, IOType rt = IOType::Text);
 
 		template<typename T>
-		Value<T> *get_as(const std::string &key) {
+		Value *get_as(const std::string &key) {
 			return nullptr;
 		}
 
-		inline std::vector<Node>::iterator begin() {
+		inline std::vector<std::unique_ptr<Node>>::iterator begin() {
 			return root.children.begin();
 		}
 
-		inline std::vector<Node>::iterator end() {
+		inline std::vector<std::unique_ptr<Node>>::iterator end() {
 			return root.children.end();
 		}
 
-		inline Node operator*() {
-			return *root.children.data();
+		inline std::unique_ptr<Node> operator*() {
+//			return *root.children.data();
+			return nullptr;
 		}
 	};
 }

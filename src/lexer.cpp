@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <iostream>
 #include "../include/e2ml.h"
+#include "../include/exceptions.h"
 
 using namespace e2ml;
 
@@ -8,25 +9,26 @@ char Data::lexChar() {
 	if (!ifStreams.back().good())
 		return tok_eof;
 
-	char ch = lostChar != -1 ? lostChar : (char) ifStreams.back().get();
-	lostChar = -1;
-	++pos;
-
 	auto readChar = [this]() -> char {
 		++pos;
 		return (char) ifStreams.back().get();;
 	};
 
+	char ch = lostChar != -1 ? lostChar : readChar();
+	lostChar = -1;
+
 	// Calculate indents
-	if (ch == ' ' && tabSize == 0 && calculateIndent) {
+	if (ch == ' ' && tabSize == 0 && calculateTabSize && calculateIndent) {
 		while (ch == ' ') {
 			++tabSize;
 			ch = readChar();
 		}
 
 		lostChar = ch;
-		return '\t';
-	} else if (ch == ' ' && tabSize > 0) {
+		++indent;
+		calculateTabSize = false;
+		return lexChar();
+	} else if (ch == ' ' && tabSize > 0 && calculateIndent) {
 		int spaces = 0;
 
 		while (ch == ' ') {
@@ -35,12 +37,14 @@ char Data::lexChar() {
 
 			if (spaces == tabSize) {
 				lostChar = ch;
-				return '\t';
+				++indent;
+				return lexChar();
 			}
 		}
 	} else if (ch == '\r' || ch == '\n') {
-		indent, pos = 0;
+		indent = 0; pos = 0;
 		++line;
+
 		calculateIndent = true;
 	} else calculateIndent = false;
 
@@ -236,13 +240,13 @@ Data::Token *Data::lexTokId() {
 	}
 
 	if (currentToken.identifier == "true") {
-		currentToken.code = tok_number;
-		currentToken.number = 1.f;
+		currentToken.code = tok_boolean;
+		currentToken.boolean = true;
 	}
 
 	if (currentToken.identifier == "false") {
-		currentToken.code = tok_number;
-		currentToken.number = 0.f;
+		currentToken.code = tok_boolean;
+		currentToken.boolean = false;
 	}
 
 	return &currentToken;
