@@ -8,23 +8,27 @@ void Data::parse() {
 	lexNextToken();
 	bool read = ifStreams.back().good();
 
-	//while (read) {
+	while (read) {
 		switch (currentToken.code) {
 			case tok_eof    : return;
 			case tok_include: parseInclude(); break;
-			case tok_id     : parseObject (); break;
+			case tok_id     : root.addChild(parseObject()); break;
 			default:
 				read = false;
 		}
-	//}
+	}
 
 	ifStreams.back().close();
 	ifStreams.pop_back();
 }
 
-void Data::parseObject() {
+Node Data::parseObject() {
 	std::string name = currentToken.string;
 	std::string type = "";
+	std::vector<Parameter> parameters;
+
+	isInline = true;
+	Node node(name, name);
 
 	int objectIndent = getIndent();
 	lexNextToken();
@@ -44,36 +48,40 @@ void Data::parseObject() {
 	while (currentToken.code != tok_eof) {
 		std::string paramName = currentToken.string;
 		lexNextToken();
-		int targetIndent = getIndent()-1;
-
-		if (currentToken.code != ':') {
-			std::cout << paramName << ": " << targetIndent << std::endl;
-			lexPrevToken();
-			parseObject();
-			continue;
-		}
+		int targetIndent = isInline ? getIndent() : getIndent()-1;
 
 		if (objectIndent != targetIndent) {
 			break;
 		}
 
-		std::cout << paramName << ": " << targetIndent << std::endl;
+		if (currentToken.code != ':') {
+			lexPrevToken();
 
-		parseParameters(paramName);
+			node.addChild(parseObject());
+			continue;
+		}
+
+		parameters.push_back(parseParameter(paramName));
 	}
 
 	lexPrevToken();
+	node.parameters = std::move(parameters);
+
+	return node;
+	//nodes.push_back(std::move(node));
+	//nesting.pop_back();
 }
 
 void Data::parseInclude() {
 
 }
 
-void Data::parseParameters(const std::string &name) {
+Parameter Data::parseParameter(const std::string &name) {
 	lockIndent();
+	std::vector<std::unique_ptr<Value>> values;
 
 	while (true) {
-		parseValue();
+		values.push_back(parseValue());
 		lexNextToken();
 
 		if (currentToken.code != ',')
@@ -81,6 +89,7 @@ void Data::parseParameters(const std::string &name) {
 	}
 
 	unlockIndent();
+	return Parameter(name, name, std::move(values));
 }
 
 std::unique_ptr<Value> Data::parseValue() {

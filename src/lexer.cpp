@@ -18,6 +18,7 @@ char Data::lexChar() {
 	lostChar = -1;
 
 	// Calculate indents
+	// TODO: refactoring
 	if (ch == ' ' && tabSize == 0 && calculateTabSize && calculateIndent) {
 		while (ch == ' ') {
 			++tabSize;
@@ -42,8 +43,12 @@ char Data::lexChar() {
 			}
 		}
 	} else if (ch == '\r' || ch == '\n') {
+		if (lockRN)
+			return ch;
+
 		lastIndent = indent;
 		indent = 0; pos = 0;
+		isInline = false;
 		++line;
 
 		calculateIndent = true;
@@ -59,7 +64,7 @@ Data::Token *Data::lexNextToken() {
 		return &tokenStack[stackCursor++];
 	} else {
 		lexToken();
-		currentToken.indent = getIndent();
+		currentToken.indent = indent;
 		tokenStack.push_back(currentToken);
 		stackCursor = tokenStack.size();
 		return &currentToken;
@@ -96,7 +101,7 @@ Data::Token *Data::lexToken() {
 		return lexTokString();
 
 	// Identifier: [a-zA-Z_][a-zA-Z0-9_]*
-	if (isalpha (lastChar) || lastChar == '_')
+	if (isalpha(lastChar) || lastChar == '_')
 		return lexTokId();
 
 	// Number Float or Integer: [0-9] (.[0-9]+)? (E[+-]? [0-9]+)?
@@ -229,11 +234,14 @@ Data::Token *Data::lexTokNumber() {
 
 Data::Token *Data::lexTokId() {
 	currentToken = Token(tok_id);
+	lockRN = true;
 
 	while (isdigit(lastChar) || isalpha(lastChar) || lastChar == '_') {
 		currentToken.identifier += lastChar;
 		lastChar = lexChar();
 	}
+
+	lockRN = false;
 
 	currentToken.string = currentToken.identifier;
 	std::transform(currentToken.identifier.begin(), currentToken.identifier.end(),

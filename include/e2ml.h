@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <bits/unique_ptr.h>
+#include <map>
 #include "values.h"
 
 
@@ -21,12 +22,32 @@ namespace e2ml {
 
 	enum class IOType {Text, Bin};
 
-	class Node {
+	class Parameter {
 	public:
 		std::string name;
 		std::string path;
 		std::vector<std::unique_ptr<Value>> values;
-		std::vector<std::unique_ptr<Node>> children;
+
+		Parameter(const std::string &name, const std::string &path,
+		          std::vector<std::unique_ptr<Value>> values)
+				: name(name), path(path), values(std::move(values)) {}
+	};
+
+	class Node {
+	public:
+		std::string name;
+		std::string path;
+		std::vector<Parameter> parameters;
+		std::vector<Node> children;
+
+		Node() {}
+		Node(const std::string &name, const std::string &path) : name(name), path(path) {}
+		Node(const std::string &name, const std::string &path, std::vector<Parameter> parameters)
+				: name(name), path(path), parameters(std::move(parameters)) {}
+
+		inline void addChild(Node node) {
+			children.push_back(std::move(node));
+		}
 	};
 
 	class Data {
@@ -34,7 +55,8 @@ namespace e2ml {
 		struct Token {
 			Token() {}
 			Token(const char code): code(code) { }
-			Token(const char code, const std::string &identifier): code(code), identifier(identifier) {}
+			Token(const char code, const std::string &identifier)
+					: code(code), identifier(identifier) {}
 
 			int indent;
 			char code;
@@ -49,7 +71,7 @@ namespace e2ml {
 		bool calculateIndent = true;
 		bool calculateTabSize = true;
 		int  indent = 0;
-		int lastIndent = 0;
+		int  lastIndent = 0;
 		int  lockedIndent = 0;
 		char lostChar = -1;
 
@@ -61,11 +83,14 @@ namespace e2ml {
 
 		// Meta information
 		Token currentToken;
-		char  lastChar    = ' ';
+		char  lastChar     = ' ';
 		bool  isLockIndent = false;
 		bool  skipTab      = false;
 		int   line         = 1;
 		int   pos          = 0;
+		bool  isInline     = false;
+
+		bool lockRN = false; // If true block skipping newline in lexer and just return newline char
 
 		// Lexer
 		char   lexChar();
@@ -92,8 +117,8 @@ namespace e2ml {
 
 		// Parser
 		void parse();
-		void parseObject();
-		void parseParameters(const std::string &name);
+		Node parseObject();
+		Parameter parseParameter(const std::string &name);
 		std::unique_ptr<Value> parseValue();
 		std::unique_ptr<Value> parseArray();
 		void parseInclude();
@@ -107,17 +132,8 @@ namespace e2ml {
 			return nullptr;
 		}
 
-		inline std::vector<std::unique_ptr<Node>>::iterator begin() {
-			return root.children.begin();
-		}
-
-		inline std::vector<std::unique_ptr<Node>>::iterator end() {
-			return root.children.end();
-		}
-
-		inline std::unique_ptr<Node> operator*() {
-//			return *root.children.data();
-			return nullptr;
-		}
+		inline std::vector<Node>::iterator begin() { return root.children.begin(); }
+		inline std::vector<Node>::iterator end()   { return root.children.end(); }
+		inline Node *operator*()                   { return root.children.data(); }
 	};
 }

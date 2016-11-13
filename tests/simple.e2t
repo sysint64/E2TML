@@ -3,7 +3,12 @@
 
 Object (Test) # Comment
     param1: 1, 2, [1, 2, [1, 3, true]], 4
-    # param1: 1, [[1, 2, 3], [1, 2, 3]]
+    paramArray: [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9]
+    ]
+
     param2: true
     param3: identifier
     param4: "String"
@@ -12,19 +17,25 @@ Object (Test) # Comment
     Child (Test)
         param1: 1, 2
 
-    param7: 111
-    param8: 232
+    Child2(Test)
+        param1: 1, 2
+        param2: 1, 2
 
-    Child2
+        ChildInline(Class) param1: 10, 11 param2: "Hello world" param3: [1, 2, 3]
+
+    Child2 (Test)
         param1: 1, 4, 3
         param2: [1, 2, 3]
 
         Child3 (TA22)
-            param1: 12
+            param2: 12
+
+            Child4(ASDA)
+                param1: 12
 
         param3: 232
 
-    param9: 23
+    param6: 23
 
 #    ChildInline param1: 1, 2 param2: 1, 3
 
@@ -33,3 +44,6 @@ Object (Test) # Comment
 
 #        &__0
 #            param1: "Hello world!"
+
+Object (Test2)
+    param1: 1, 2
