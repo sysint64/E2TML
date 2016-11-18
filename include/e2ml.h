@@ -7,6 +7,8 @@
 #include <bits/unique_ptr.h>
 #include <map>
 #include "values.h"
+#include "exceptions.h"
+#include <assert.h>
 
 
 namespace e2ml {
@@ -22,7 +24,11 @@ namespace e2ml {
 
 	enum class IOType {Text, Bin};
 
+	class Node;
 	class Parameter {
+	private:
+		Node *parent = nullptr;
+
 	public:
 		std::string name;
 		std::string path;
@@ -31,22 +37,40 @@ namespace e2ml {
 		Parameter(const std::string &name, const std::string &path,
 		          std::vector<std::unique_ptr<Value>> values)
 				: name(name), path(path), values(std::move(values)) {}
+
+		void generatePath(Node *parent);
+//		inline void generatePath(Node *parent) {
+//			assert(this->parent == nullptr);
+//
+//			this->parent = parent;
+//			path = parent->path + "." + name;
+//		}
 	};
 
 	class Node {
+	private:
+		Node *parent = nullptr;
+
 	public:
 		std::string name;
 		std::string path;
-		std::vector<Parameter> parameters;
-		std::vector<Node> children;
+		std::vector<std::unique_ptr<Parameter>> parameters;
+		std::vector<std::unique_ptr<Node>> children;
 
 		Node() {}
 		Node(const std::string &name, const std::string &path) : name(name), path(path) {}
-		Node(const std::string &name, const std::string &path, std::vector<Parameter> parameters)
+		Node(const std::string &name, const std::string &path, std::vector<std::unique_ptr<Parameter>> parameters)
 				: name(name), path(path), parameters(std::move(parameters)) {}
 
-		inline void addChild(Node node) {
+		inline void addChild(std::unique_ptr<Node> node) {
 			children.push_back(std::move(node));
+		}
+
+		inline void generatePath(Node *parent) {
+			assert(this->parent == nullptr);
+
+			this->parent = parent;
+			path = parent->path + "." + name;
 		}
 	};
 
@@ -75,10 +99,13 @@ namespace e2ml {
 		int  lockedIndent = 0;
 		char lostChar = -1;
 
-		Node root;
 		std::vector<std::ifstream> ifStreams;
 		std::vector<unsigned char> byteCode;
 		std::vector<Token> tokenStack;
+		std::map<std::string, Node*> nodesMap;
+		std::map<std::string, Parameter*> parametersMap;
+		std::map<std::string, Value*> valuesMap;
+
 		size_t stackCursor = 0;
 
 		// Meta information
@@ -117,23 +144,48 @@ namespace e2ml {
 
 		// Parser
 		void parse();
-		Node parseObject();
-		Parameter parseParameter(const std::string &name);
-		std::unique_ptr<Value> parseValue();
-		std::unique_ptr<Value> parseArray();
+		std::unique_ptr<Node> parseObject();
+		std::unique_ptr<Parameter> parseParameter(const std::string &name);
+		std::unique_ptr<Value> parseValue(const std::string &name);
+		std::unique_ptr<Value> parseArray(const std::string &name);
 		void parseInclude();
+
+		void generatePath(Node *parent = nullptr);
+		void generateParamsPath(Node *node = nullptr);
+		void generateValuesPath(Parameter *parameter = nullptr);
+
+		template<typename T>
+		T getValue(const std::string &key, const Value::Type &valueType) {
+			Value *value = getValue(key);
+
+			if (value->getType() != valueType)
+				throw BadValueType(Value::typeToString(valueType), value->getTypeString());
+
+			//return value;
+			return dynamic_cast<T>(value);
+		}
 
 	public:
 		void load(const std::string &fileName, IOType rt = IOType::Text);
 		void save(const std::string &fileName, IOType rt = IOType::Text);
+
+		Node root;
 
 		template<typename T>
 		Value *get_as(const std::string &key) {
 			return nullptr;
 		}
 
-		inline std::vector<Node>::iterator begin() { return root.children.begin(); }
-		inline std::vector<Node>::iterator end()   { return root.children.end(); }
-		inline Node *operator*()                   { return root.children.data(); }
+		Value *getValue(const std::string &key);
+		float getNumber(const std::string &key);
+		int getInt(const std::string &key);
+		std::string getString(const std::string &key);
+		std::u32string getUTFString(const std::string &key);
+		bool getBoolean(const std::string &key);
+		ArrayValue *getArray(const std::string &key);
+
+//		inline std::vector<Node>::iterator begin() { return root.children.begin(); }
+//		inline std::vector<Node>::iterator end()   { return root.children.end(); }
+//		inline Node *operator*()                   { return root.children.data(); }
 	};
 }

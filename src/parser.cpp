@@ -20,15 +20,17 @@ void Data::parse() {
 
 	ifStreams.back().close();
 	ifStreams.pop_back();
+
+	generatePath(&root);
 }
 
-Node Data::parseObject() {
+std::unique_ptr<Node> Data::parseObject() {
 	std::string name = currentToken.string;
 	std::string type = "";
-	std::vector<Parameter> parameters;
+	std::vector<std::unique_ptr<Parameter>> parameters;
 
 	isInline = true;
-	Node node(name, name);
+	auto node = std::make_unique<Node>(name, name);
 
 	int objectIndent = getIndent();
 	lexNextToken();
@@ -57,7 +59,7 @@ Node Data::parseObject() {
 		if (currentToken.code != ':') {
 			lexPrevToken();
 
-			node.addChild(parseObject());
+			node->addChild(parseObject());
 			continue;
 		}
 
@@ -65,23 +67,22 @@ Node Data::parseObject() {
 	}
 
 	lexPrevToken();
-	node.parameters = std::move(parameters);
+	node->parameters = std::move(parameters);
 
 	return node;
-	//nodes.push_back(std::move(node));
-	//nesting.pop_back();
 }
 
 void Data::parseInclude() {
 
 }
 
-Parameter Data::parseParameter(const std::string &name) {
+std::unique_ptr<Parameter> Data::parseParameter(const std::string &name) {
 	lockIndent();
 	std::vector<std::unique_ptr<Value>> values;
 
 	while (true) {
-		values.push_back(parseValue());
+		const std::string index = std::to_string(values.size());
+		values.push_back(parseValue(index));
 		lexNextToken();
 
 		if (currentToken.code != ',')
@@ -89,38 +90,39 @@ Parameter Data::parseParameter(const std::string &name) {
 	}
 
 	unlockIndent();
-	return Parameter(name, name, std::move(values));
+	return std::make_unique<Parameter>(name, name, std::move(values));
 }
 
-std::unique_ptr<Value> Data::parseValue() {
+std::unique_ptr<Value> Data::parseValue(const std::string &name) {
 	lexNextToken();
 
 	switch (currentToken.code) {
 		case '[':
-			return parseArray();
+			return parseArray(name);
 
 		case tok_number:
-			return std::make_unique<NumberValue>(currentToken.number);
+			return std::make_unique<NumberValue>(name, currentToken.number);
 
 		case tok_string:
-			return std::make_unique<StringValue>(currentToken.string, currentToken.utfString);
+			return std::make_unique<StringValue>(name, currentToken.string, currentToken.utfString);
 
 		case tok_id:
-			return std::make_unique<StringValue>(currentToken.string);
+			return std::make_unique<StringValue>(name, currentToken.string);
 
 		case tok_boolean:
-			return std::make_unique<BooleanValue>(currentToken.boolean);
+			return std::make_unique<BooleanValue>(name, currentToken.boolean);
 
 		default:
 			throw ParseError("value error", line, pos);
 	}
 }
 
-std::unique_ptr<Value> Data::parseArray() {
+std::unique_ptr<Value> Data::parseArray(const std::string &name) {
 	std::vector<std::unique_ptr<Value>> values;
 
 	while (currentToken.code != ']' || currentToken.code != tok_eof) {
-		auto value = parseValue();
+		const std::string index = std::to_string(values.size());
+		auto value = parseValue(index);
 		values.push_back(std::move(value));
 		lexNextToken();
 
@@ -131,5 +133,5 @@ std::unique_ptr<Value> Data::parseArray() {
 			break;
 	}
 
-	return std::make_unique<ArrayValue>(std::move(values));
+	return std::make_unique<ArrayValue>(name, std::move(values));
 }

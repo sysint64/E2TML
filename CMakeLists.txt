@@ -9,5 +9,7 @@ set(SOURCE_FILES main.cpp
         include/values.h
         src/e2ml.cpp
         src/parser.cpp
-        src/lexer.cpp)
+        src/lexer.cpp
+        src/path.cpp
+        src/values.cpp)
 add_executable(e2ml ${SOURCE_FILES})
